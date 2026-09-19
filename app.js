@@ -2,8 +2,8 @@ let DATA = {meta:{},tasks:[]};
 let currentView = 'searchView';
 let previousView = 'searchView';
 let selectedTask = null;
-let wizard = {step:1, side:'LH', zone:null, structure:null, position:null, damage:null, measurements:{}};
-let locator = {side:'LH', zone:null};
+let wizard = {step:1, side:'LH', zone:null, structure:null, position:null, damage:null, measurements:{}, station:null};
+let locator = {side:'LH', zone:null, mode:'overview', station:null, component:null, structConfig:localStorage.getItem('masterSRM.structConfig')||'ST3'};
 let currentPdfUrl = null;
 
 const $ = s => document.querySelector(s);
@@ -27,7 +27,7 @@ function bindUI(){
   $('#settingsBtn').addEventListener('click',()=>{ previousView=currentView; showView('settingsView', false); });
   $('#settingsBack').addEventListener('click',()=>showView(previousView,false));
   $('#locatorBack').addEventListener('click',()=>showView('searchView'));
-  $('#openLocatorBtn').addEventListener('click',()=>{ locator.zone=null; locator.side=wizard.side||'LH'; showView('locatorView'); });
+  $('#openLocatorBtn').addEventListener('click',()=>{ locator.zone=null; locator.station=null; locator.component=null; locator.mode='overview'; locator.side=wizard.side||'LH'; showView('locatorView'); });
   $$('.side-btn').forEach(btn=>btn.addEventListener('click',()=>{ locator.side=btn.dataset.side; $$('.side-btn').forEach(x=>x.classList.toggle('active',x.dataset.side===locator.side)); renderLocator(); }));
   $('#wizardBack').addEventListener('click',()=>{
     if(wizard.step>1){ wizard.step--; renderWizard(); } else showView('searchView');
@@ -65,7 +65,7 @@ function showView(id, updateNav=true){
 function goHome(){
   $('#searchInput').value='';
   search('');
-  locator.zone=null;
+  locator.zone=null; locator.station=null; locator.component=null; locator.mode='overview';
   resetWizard(false);
   showView('searchView');
 }
@@ -159,20 +159,109 @@ const zoneInfo={
   tail:{title:'Tail / Empennage',sub:'Хвостовое оперение',next:'search'}
 };
 
+const majorFrames=[
+  {x:2962,fr:'FR 1'},{x:5707,fr:'FR 13'},{x:7684,fr:'FR 17A'},
+  {x:8595,fr:'FR 19A'},{x:11132,fr:'FR 24'},{x:13850,fr:'FR 25'},
+  {x:14981,fr:'FR 27'},{x:15509,fr:'FR 28'},{x:22645,fr:'FR 39'},
+  {x:24053,fr:'FR 42'},{x:24921,fr:'FR 44'},{x:29528,fr:'FR 48'}
+];
+const stationFigures={
+  ST2:{src:'assets/fig2-st2.png',sheet:'Figure 2 · Sheet 1 · ST2',page:332},
+  ST3:{src:'assets/fig2-st3.png',sheet:'Figure 2 · Sheet 2 · ST3',page:333},
+  ST7:{src:'assets/fig2-st7.png',sheet:'Figure 2 · Sheet 3 · ST7 Freighter',page:334}
+};
+const locatorZones={
+  nose:{title:'Nose / FWD fuselage',sub:'Передняя носовая часть',mode:'fuselage'},
+  fwd:{title:'FWD Fuselage',sub:'Передняя часть фюзеляжа',mode:'fuselage'},
+  'cargo-area':{title:'Cargo Door Area',sub:'Район cargo-compartment door / surrounding skin',mode:'fuselage'},
+  center:{title:'Center Fuselage',sub:'Центральная часть фюзеляжа',mode:'fuselage'},
+  rear:{title:'Rear Fuselage',sub:'Задняя часть фюзеляжа',mode:'fuselage'},
+  tail:{title:'Vertical Stabilizer / Tail',sub:'Хвостовое оперение',mode:'components'},
+  gear:{title:'Landing Gear Area',sub:'Зона шасси / adjacent structure',mode:'overview'},
+  'wing-fairing':{title:'Wing to Fuselage Fairing',sub:'Wing-to-fuselage fairing',mode:'components'},
+  nacelle:{title:'Power Plant / Nacelle',sub:'Engine nacelle and power-plant area',mode:'components'},
+  'belly-fairing':{title:'Belly Fairings',sub:'Belly fairing structure',mode:'components'},
+  'vertical-stabilizer':{title:'Vertical Stabilizer',sub:'Vertical stabilizer frames/stations/sections',mode:'components'}
+};
+function hotspot(id,label,left,top,width,height,kind=''){
+  return `<button class="tech-hotspot ${kind} ${locator.zone===id||locator.component===id?'selected':''}" data-zone="${id}" style="left:${left}%;top:${top}%;width:${width}%;height:${height}%"><span>${label}</span></button>`;
+}
+function overviewMapHtml(compact=false){
+  return `<div class="official-map ${compact?'compact':''}">
+    <div class="source-strip"><b>SRM 51-00-02</b><span>Figure 5 · Major Sub Zones</span></div>
+    <div class="tech-map-wrap overview-tech-map">
+      <img src="assets/fig5-major-subzones.png" alt="ATR72 SRM major sub zones" draggable="false">
+      ${hotspot('nose','NOSE',4,42,13,21)}
+      ${hotspot('fwd','FWD',16,41,26,22)}
+      ${hotspot('cargo-area','CARGO',23,43,10,19,'accent')}
+      ${hotspot('center','CENTER',40,40,22,24)}
+      ${hotspot('gear','GEAR',46,57,13,18)}
+      ${hotspot('rear','REAR',61,38,23,27)}
+      ${hotspot('tail','TAIL',82,23,16,34)}
+    </div>
+    <div class="map-legend"><span><i></i>нажимай прямо на конструкцию</span><small>оригинальная SRM figure</small></div>
+  </div>`;
+}
+function componentsMapHtml(){
+  return `<div class="official-map">
+    <div class="source-strip"><b>SRM 51-00-02</b><span>Figure 3 · Frames / Stations / Sections</span></div>
+    <div class="tech-map-wrap components-tech-map">
+      <img src="assets/fig3-components.png" alt="SRM component location figure" draggable="false">
+      ${hotspot('vertical-stabilizer','VERT STAB',46,1,50,27)}
+      ${hotspot('wing-fairing','WING FAIRING',4,33,56,24)}
+      ${hotspot('nacelle','NACELLE',63,38,36,29)}
+      ${hotspot('belly-fairing','BELLY FAIRING',4,72,68,27)}
+    </div>
+    <div class="map-legend"><span><i></i>узлы самолёта</span><small>FWD / STA / RIB сохранены на рисунке</small></div>
+  </div>`;
+}
+function closestMajorFrame(x){ return majorFrames.reduce((a,b)=>Math.abs(b.x-x)<Math.abs(a.x-x)?b:a); }
+function zoneFromStation(x){
+  if(x>=5200 && x<=8500) return 'cargo-area';
+  if(x<14981) return 'fwd';
+  if(x<22645) return 'center';
+  return 'rear';
+}
+function stationMapHtml(){
+  const f=stationFigures[locator.structConfig]||stationFigures.ST3;
+  const marker=locator.station?`<div class="station-marker" style="top:${locator.station.yPct}%"><span></span></div>`:'';
+  return `<div class="official-map station-map-card">
+    <div class="source-strip"><b>SRM 51-00-02</b><span>${f.sheet}</span></div>
+    <div class="locator-config-row"><label>Конфигурация рисунка</label><select id="structConfigSelect"><option value="ST2" ${locator.structConfig==='ST2'?'selected':''}>ST2</option><option value="ST3" ${locator.structConfig==='ST3'?'selected':''}>ST3</option><option value="ST7" ${locator.structConfig==='ST7'?'selected':''}>ST7 · Freighter</option></select></div>
+    <div class="station-scroll"><div class="tech-map-wrap station-tech-map" id="stationMapWrap">
+      <img src="${f.src}" alt="${f.sheet} fuselage stations and frames" draggable="false">
+      <button id="stationTapArea" class="station-tap-area" aria-label="Нажми на фюзеляж для выбора станции"></button>${marker}
+    </div></div>
+    <div class="station-help">Нажми на продольное место повреждения. Все STA / FR остаются видимыми на исходном рисунке; расчёт X ниже - только навигационная подсказка.</div>
+    <button class="text-link" id="openFigurePdf">Оригинал SRM · PDF ${f.page}</button>
+  </div>`;
+}
+function locatorTabs(){
+  const tab=(m,t)=>`<button class="locator-tab ${locator.mode===m?'active':''}" data-locator-mode="${m}">${t}</button>`;
+  return `<div class="locator-tabs">${tab('overview','Общий вид')}${tab('fuselage','STA / FR')}${tab('components','Узлы')}</div>`;
+}
 function renderLocator(){
   if(!$('#locatorBody')) return;
   $$('.side-btn').forEach(x=>x.classList.toggle('active',x.dataset.side===locator.side));
-  const info=locator.zone?zoneInfo[locator.zone]:null;
-  $('#locatorBody').innerHTML=`
-    <div class="aircraft-map-card">
-      <div class="map-help"><strong>${locator.side} SIDE</strong><span>Нажми пальцем на повреждённую область</span></div>
-      ${planeSvg(locator.zone)}
-      <div class="map-legend"><span><i></i>активные зоны</span><small>схема для навигации, не технический чертёж</small></div>
-    </div>
-    ${info?`<div class="selection-card"><div><span class="eyebrow">ВЫБРАНО</span><h3>${info.title}</h3><p>${info.sub} · ${locator.side}</p></div><button class="primary-action" id="locatorContinue">Продолжить</button></div>`:`<div class="info-card"><strong>Как пользоваться</strong><p>Например, если вмятина слева от Cargo Door — нажми область вокруг двери. На следующем экране выберешь: сама дверь или fuselage skin, затем FWD/AFT/ABOVE/BELOW.</p></div>`}
+  let map='';
+  if(locator.mode==='fuselage') map=stationMapHtml();
+  else if(locator.mode==='components') map=componentsMapHtml();
+  else map=overviewMapHtml(false);
+  const info=locator.station?{title:`≈ X/STA ${Math.round(locator.station.x)}`,sub:`${locator.station.frame.fr} · ${locator.side} · ${locator.structConfig}`}:(locator.zone?locatorZones[locator.zone]:locator.component?locatorZones[locator.component]:null);
+  $('#locatorBody').innerHTML=`${locatorTabs()}${map}
+    ${info?`<div class="selection-card"><span class="eyebrow">ВЫБРАНО</span><h3>${info.title}</h3><p>${info.sub}</p><div class="selection-actions">${locator.mode==='overview' && locatorZones[locator.zone]?.mode==='fuselage'?`<button class="secondary-action" id="refineStation">Уточнить STA / FR</button>`:''}<button class="primary-action" id="locatorContinue">Продолжить</button></div></div>`:`<div class="info-card"><strong>Нажми на место повреждения</strong><p>Сначала выбери сторону LH/RH. Для фюзеляжа можно перейти в STA/FR и поставить точку по официальному рисунку.</p></div>`}
   `;
-  bindPlaneZones('#locatorBody',z=>{ locator.zone=z; renderLocator(); });
+  $$('#locatorBody [data-locator-mode]').forEach(b=>b.onclick=()=>{ locator.mode=b.dataset.locatorMode; locator.zone=null; locator.component=null; locator.station=null; renderLocator(); });
+  $$('#locatorBody .tech-hotspot').forEach(b=>b.onclick=()=>{ const z=b.dataset.zone; if(locator.mode==='components') locator.component=z; else locator.zone=z; locator.station=null; renderLocator(); });
+  $('#refineStation')?.addEventListener('click',()=>{ locator.mode='fuselage'; renderLocator(); });
   $('#locatorContinue')?.addEventListener('click',continueFromLocator);
+  $('#structConfigSelect')?.addEventListener('change',e=>{ locator.structConfig=e.target.value; localStorage.setItem('masterSRM.structConfig',locator.structConfig); locator.station=null; renderLocator(); });
+  $('#stationTapArea')?.addEventListener('click',e=>{
+    const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientY-r.top)/r.height));
+    const x=29528-p*(29528-2362); const frame=closestMajorFrame(x);
+    locator.station={x,frame,yPct:1+p*72}; locator.zone=zoneFromStation(x); locator.component=null; renderLocator();
+  });
+  $('#openFigurePdf')?.addEventListener('click',()=>openPdfAt((stationFigures[locator.structConfig]||stationFigures.ST3).page));
 }
 
 function bindPlaneZones(scope,handler){
@@ -183,39 +272,31 @@ function bindPlaneZones(scope,handler){
 }
 
 function continueFromLocator(){
-  const z=locator.zone; if(!z) return;
-  resetWizard(false); wizard.side=locator.side;
+  const z=locator.zone || locator.component; if(!z) return;
+  resetWizard(false); wizard.side=locator.side; wizard.station=locator.station;
   if(z==='cargo-area'){ wizard.zone='cargo-area'; wizard.step=2; }
-  else if(z==='ice-shield'){ wizard.zone='ice-shield'; wizard.structure='ice'; wizard.step=3; }
+  else if(z==='fwd'||z==='nose'){ wizard.zone='fwd'; wizard.structure='skin'; wizard.step=3; }
   else if(z==='rear'){ wizard.zone='rear'; wizard.structure='skin'; wizard.step=3; }
-  else if(z==='fwd'||z==='center'){ wizard.zone='fwd'; wizard.structure='skin'; wizard.step=3; }
-  else {
-    const q=z==='wing'?'wing damage':'tail empennage damage';
-    showView('searchView'); $('#searchInput').value=q; search(q); toast('Для этой зоны пока открываю поиск SRM'); return;
-  }
+  else if(z==='center'){ wizard.zone='center'; wizard.step=2; }
+  else if(z==='tail'||z==='vertical-stabilizer'||z==='wing-fairing'||z==='nacelle'||z==='belly-fairing'||z==='gear'){
+    const q=(locatorZones[z]?.title||z)+' damage'; showView('searchView'); $('#searchInput').value=q; search(q); toast('Место сохранено; для этого узла автоматический damage rule пока не индексирован'); return;
+  } else { showView('searchView'); return; }
   showView('wizardView');
 }
 
-function resetWizard(render=true){ wizard={step:1,side:locator.side||'LH',zone:null,structure:null,position:null,damage:null,measurements:{}}; if(render) renderWizard(); }
+function resetWizard(render=true){ wizard={step:1,side:locator.side||'LH',zone:null,structure:null,position:null,damage:null,measurements:{},station:null}; if(render) renderWizard(); }
 
 function renderWizard(){
   if(!$('#wizardBody')) return;
   $('#wizardStep').textContent=`${Math.min(wizard.step,4)} / 4`;
   const body=$('#wizardBody');
   if(wizard.step===1){
-    body.innerHTML=`<div class="aircraft-map-card compact-map"><div class="map-help"><strong>ATR 72 · ${wizard.side}</strong><span>Ткни область прямо на самолёте</span></div>${planeSvg(wizard.zone,true)}</div><div class="wizard-question">Или выбери область кнопкой</div><div class="choice-grid">${choice('zone','cargo-area','Cargo Door Area','обшивка рядом с багажной дверью')}${choice('zone','ice-shield','Ice Shield','защитный щит фюзеляжа')}${choice('zone','fwd','FWD Fuselage','передняя часть фюзеляжа')}${choice('zone','rear','Rear Fuselage','задняя часть фюзеляжа')}</div>`;
-    bindPlaneZones('#wizardBody',z=>{
-      if(z==='tail'||z==='wing'){ locator.zone=z; locator.side=wizard.side; showView('locatorView'); return; }
-      wizard.zone=z==='center'?'fwd':z;
-      if(z==='ice-shield'){ wizard.structure='ice'; wizard.step=3; }
-      else if(z==='fwd'||z==='rear'||z==='center'){ wizard.structure='skin'; wizard.step=3; }
-      else wizard.step=2;
-      renderWizard();
-    });
+    body.innerHTML=`<div class="aircraft-map-card compact-map"><div class="map-help"><strong>ATR 72 · ${wizard.side}</strong><span>Ткни область на официальной SRM figure</span></div>${overviewMapHtml(true)}</div><div class="wizard-question">Или выбери область кнопкой</div><div class="choice-grid">${choice('zone','cargo-area','Cargo Door Area','обшивка рядом с багажной дверью')}${choice('zone','ice-shield','Ice Shield','защитный щит фюзеляжа')}${choice('zone','fwd','FWD Fuselage','передняя часть фюзеляжа')}${choice('zone','rear','Rear Fuselage','задняя часть фюзеляжа')}</div>`;
+    $$('#wizardBody .tech-hotspot').forEach(b=>b.onclick=()=>{ const z=b.dataset.zone; if(z==='tail'||z==='gear'){ locator.zone=z; locator.side=wizard.side; locator.mode='overview'; showView('locatorView'); return; } wizard.zone=z==='nose'?'fwd':z; if(z==='fwd'||z==='rear'){ wizard.structure='skin'; wizard.step=3; } else if(z==='center'){ wizard.step=2; } else wizard.step=2; renderWizard(); });
   } else if(wizard.step===2){
-    body.innerHTML=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||wizard.zone}</strong></div><div class="wizard-question">Что именно повреждено?</div><div class="choice-grid">${choice('structure','skin','Fuselage Skin','обшивка самолёта')}${choice('structure','door','Cargo Door','сама багажная дверь')}${choice('structure','ice','Ice Shield','металлический щит')}${choice('structure','unknown','Не уверен','показать Identification')}</div>${wizard.zone==='cargo-area'?`<div class="panel"><strong>Положение относительно двери</strong><div class="choice-grid" style="margin-top:10px">${choice('position','fwd','FWD','перед дверью')}${choice('position','aft','AFT','за дверью')}${choice('position','above','ABOVE','над дверью')}${choice('position','below','BELOW','под дверью')}</div></div>`:''}`;
+    body.innerHTML=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||locatorZones[wizard.zone]?.title||wizard.zone}</strong>${wizard.station?`<small>≈ X/STA ${Math.round(wizard.station.x)} · ${wizard.station.frame.fr}</small>`:''}</div><div class="wizard-question">Что именно повреждено?</div><div class="choice-grid">${choice('structure','skin','Fuselage Skin','обшивка самолёта')}${choice('structure','door','Cargo Door','сама багажная дверь')}${choice('structure','ice','Ice Shield','металлический щит')}${choice('structure','unknown','Не уверен','показать Identification')}</div>${wizard.zone==='cargo-area'?`<div class="panel"><strong>Положение относительно двери</strong><div class="choice-grid" style="margin-top:10px">${choice('position','fwd','FWD','перед дверью')}${choice('position','aft','AFT','за дверью')}${choice('position','above','ABOVE','над дверью')}${choice('position','below','BELOW','под дверью')}</div></div>`:''}`;
   } else if(wizard.step===3){
-    body.innerHTML=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||wizard.zone}</strong><small>${wizard.position?wizard.position.toUpperCase():''}</small></div><div class="wizard-question">Тип повреждения</div><div class="choice-grid">${choice('damage','dent','Dent','вмятина')}${choice('damage','scratch','Scratch / Score','царапина / риска')}${choice('damage','crack','Crack','трещина')}${choice('damage','corrosion','Corrosion','коррозия')}</div>`;
+    body.innerHTML=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||locatorZones[wizard.zone]?.title||wizard.zone}</strong><small>${wizard.position?wizard.position.toUpperCase():''}</small>${wizard.station?`<small>≈ X/STA ${Math.round(wizard.station.x)} · ${wizard.station.frame.fr}</small>`:''}</div><div class="wizard-question">Тип повреждения</div><div class="choice-grid">${choice('damage','dent','Dent','вмятина')}${choice('damage','scratch','Scratch / Score','царапина / риска')}${choice('damage','crack','Crack','трещина')}${choice('damage','corrosion','Corrosion','коррозия')}</div>`;
   } else {
     const target=resolveWizardTask();
     if(!target){
@@ -240,7 +321,7 @@ function bindChoices(){
     const g=b.dataset.group,v=b.dataset.value; wizard[g]=v;
     if(g==='zone'){
       if(v==='ice-shield'){ wizard.structure='ice'; wizard.step=3; }
-      else if(v==='fwd'||v==='rear'){ wizard.structure='skin'; wizard.step=3; }
+      else if(v==='fwd'||v==='rear'){ wizard.structure='skin'; wizard.step=3; } else if(v==='center'){ wizard.step=2; }
       else wizard.step=2;
     }
     else if(g==='structure'){
@@ -259,13 +340,14 @@ function resolveWizardTask(){
   if(wizard.structure==='door' && wizard.damage==='dent') return DATA.tasks.find(t=>t.id==='cargo-door-dent');
   if(wizard.damage==='dent'){
     if(wizard.zone==='rear') return DATA.tasks.find(t=>t.id==='rear-fuselage-skin-dent');
-    return DATA.tasks.find(t=>t.id==='fwd-fuselage-skin-dent');
+    if(wizard.zone==='fwd'||wizard.zone==='cargo-area') return DATA.tasks.find(t=>t.id==='fwd-fuselage-skin-dent');
+    return null;
   }
   return null;
 }
 
 function measurementForm(t){
-  const loc=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||''}</strong>${wizard.position?`<small>${wizard.position.toUpperCase()}</small>`:''}</div>`;
+  const st=wizard.station?`<small>≈ X/STA ${Math.round(wizard.station.x)} · ${wizard.station.frame.fr}</small>`:''; const loc=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||locatorZones[wizard.zone]?.title||''}</strong>${wizard.position?`<small>${wizard.position.toUpperCase()}</small>`:''}${st}</div>`;
   if(t.rule?.type==='iceShieldDepth') return `${loc}<div class="detail-hero"><div class="ata">ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div><div class="panel"><div class="wizard-question">Введи измерение</div><div class="field"><label>Глубина повреждения, mm</label><input id="depthMm" inputmode="decimal" placeholder="например 5.5"></div></div><div class="wizard-actions"><button class="secondary-action" id="openTaskDirect">Условия</button><button class="primary-action" id="evaluateBtn">Проверить</button></div>`;
   return `${loc}<div class="detail-hero"><div class="ata">ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div><div class="panel"><div class="wizard-question">Нужны 2 значения</div><div class="measure-grid"><div class="field"><label>A — до ближайшей кромки stiffener, mm</label><input id="aMm" inputmode="decimal" placeholder="например 60"></div><div class="field"><label>Фактическая глубина dent, mm</label><input id="depthMm" inputmode="decimal" placeholder="например 1.0"></div></div><div class="field" style="margin-top:10px"><label>Положение dent относительно stiffener</label><select id="deCond"><option value="unknown">Не уверен</option><option value="valid">D ≥ E — dent не заходит на stiffener</option><option value="invalid">D &lt; E — dent распространяется на stiffener</option></select></div><div class="source-note">Если E нельзя определить, SRM указывает использовать E = 13 mm как reference measuring point для A.</div></div><div class="wizard-actions"><button class="secondary-action" id="openTaskDirect">Условия</button><button class="primary-action" id="evaluateBtn">Проверить</button></div>`;
 }
@@ -291,7 +373,7 @@ function openTask(id, fromWizard=false, evalData=null){
 
 function detailHTML(t,evalData){
   const label=t.kind==='identification'?'IDENTIFICATION':'ALLOWABLE DAMAGE';
-  return `<div class="detail-hero"><div class="ata">${label} · ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div>${evaluationBlock(t,evalData)}<div class="panel"><div class="section-heading"><span>Условия</span></div>${(t.conditions?.length?`<ul class="condition-list">${t.conditions.map(x=>`<li>${x}</li>`).join('')}</ul>`:`<p class="muted">Используй этот Identification task, чтобы точно определить structural part и effectivity перед применением damage limits.</p>`)}<div class="meta-row"><span class="meta-pill">PDF page ${t.page}</span><span class="meta-pill">${t.issue}</span><span class="meta-pill">${t.config}</span></div></div><div class="detail-actions">${t.kind==='allowable'&&t.rule?`<button class="secondary-action" id="evaluateAgainBtn">Ввести / изменить размеры</button>`:''}${t.id==='fwd-fuselage-skin-dent'?`<button class="secondary-action" id="findIdentificationBtn">Identification · Cargo Door Surround</button>`:''}${t.repairTask?`<button class="secondary-action" id="openRepairBtn">Repair reference · ${t.repairTask}</button>`:''}<button class="primary-action" id="openPdfBtn">Оригинал SRM · PDF ${t.page}</button></div><div class="source-note">Проверь A/C configuration, точную structural part и applicability на оригинальной странице SRM перед использованием результата.</div>`;
+  return `<div class="detail-hero"><div class="ata">${label} · ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div>${evaluationBlock(t,evalData)}<div class="panel"><div class="section-heading"><span>Условия</span></div>${(t.conditions?.length?`<ul class="condition-list">${t.conditions.map(x=>`<li>${x}</li>`).join('')}</ul>`:`<p class="muted">Используй этот Identification task, чтобы точно определить structural part и effectivity перед применением damage limits.</p>`)}<div class="meta-row"><span class="meta-pill">PDF page ${t.page}</span><span class="meta-pill">${t.issue}</span><span class="meta-pill">${t.config}</span></div></div><div class="detail-actions">${t.kind==='allowable'&&t.rule?`<button class="secondary-action" id="evaluateAgainBtn">Ввести / изменить размеры</button>`:''}${t.id==='fwd-fuselage-skin-dent'?`<button class="secondary-action" id="findIdentificationBtn">Identification · Cargo Door Surround</button>`:''}${t.repairTask?`<button class="secondary-action" id="openRepairBtn">Repair reference · ${t.repairTask}</button>`:''}<button class="primary-action" id="openPdfBtn">Оригинал SRM · PDF ${t.page}</button></div><div class="source-note">Проверь A/C configuration, точную structural part, STA/FR и applicability на оригинальной странице SRM перед использованием результата.</div>`;
 }
 
 function evaluationBlock(t,d){
