@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="masterSRM" />
-  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="app.css" />
   <title>masterSRM — ATR 72</title>
@@ -19,20 +19,32 @@
         <div class="brand">master<span>SRM</span></div>
         <div class="revision-line" id="revisionLine">ATR 72 · SRM Rev. 110 · Jun 01/21</div>
       </div>
-      <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙︎</button>
+      <div class="top-actions">
+        <button class="icon-btn home-btn" id="homeBtn" aria-label="На главную"><img src="icons/home-button.png" alt="" /></button>
+        <button class="icon-btn" id="settingsBtn" aria-label="Настройки">⚙︎</button>
+      </div>
     </header>
 
     <main id="searchView" class="view active">
       <section class="hero">
         <div class="eyebrow">STRUCTURAL DAMAGE FINDER</div>
         <h1>Где повреждение?</h1>
-        <p>Опиши место и тип повреждения обычными словами — приложение подберёт SRM task, условия и оригинальную страницу.</p>
+        <p>Можно написать словами или ткнуть место прямо на схеме самолёта.</p>
         <div class="search-box">
           <span class="search-icon">⌕</span>
           <input id="searchInput" placeholder="например: вмятина слева от багажной двери" autocomplete="off" />
-          <button id="clearSearch" class="clear-btn" aria-label="Clear">×</button>
+          <button id="clearSearch" class="clear-btn" aria-label="Очистить">×</button>
         </div>
       </section>
+
+      <button class="locator-launch" id="openLocatorBtn">
+        <div class="locator-launch-copy">
+          <span class="eyebrow">VISUAL LOCATION</span>
+          <strong>Ткни место на самолёте</strong>
+          <small>Выбери область повреждения пальцем</small>
+        </div>
+        <div class="locator-launch-plane" aria-hidden="true">✈︎</div>
+      </button>
 
       <section class="quick-grid" id="quickGrid">
         <button class="quick-card" data-preset="cargo-area">
@@ -58,10 +70,20 @@
         <div class="section-heading"><span>Быстрый мастер повреждения</span></div>
         <button class="primary-action" id="startWizardBtn">Начать по месту повреждения</button>
         <div class="info-card compact">
-          <strong>Прототип v0.1</strong>
-          <p>Сейчас полностью настроены: Ice Shield, dents на обшивке FWD/REAR fuselage и dents на Cargo Compartment Door. Остальные зоны будут добавляться по SRM постепенно.</p>
+          <strong>Интерактивная схема</strong>
+          <p>Самолёт теперь кликабельный. Схема нужна для навигации; точную деталь и applicability всё равно подтверждаем по Identification и оригинальному SRM.</p>
         </div>
       </section>
+    </main>
+
+    <main id="locatorView" class="view">
+      <div class="detail-nav"><button class="back-btn" id="locatorBack">‹ <span>Назад</span></button><span class="step-chip">LOCATION</span></div>
+      <div class="page-title">Покажи место повреждения</div>
+      <div class="side-switch" role="group" aria-label="Сторона самолёта">
+        <button class="side-btn active" data-side="LH">LH</button>
+        <button class="side-btn" data-side="RH">RH</button>
+      </div>
+      <div id="locatorBody"></div>
     </main>
 
     <main id="wizardView" class="view">
@@ -110,6 +132,7 @@
 
     <nav class="bottom-nav">
       <button class="nav-item active" data-view="searchView"><span>⌕</span><small>Поиск</small></button>
+      <button class="nav-item" data-view="locatorView"><span>✈︎</span><small>Самолёт</small></button>
       <button class="nav-item" data-view="wizardView"><span>◎</span><small>Повреждение</small></button>
       <button class="nav-item" data-view="documentView"><span>▤</span><small>SRM</small></button>
     </nav>

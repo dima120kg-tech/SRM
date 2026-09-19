@@ -6,7 +6,8 @@
     "revision": "110",
     "revisionDate": "Jun 01/21",
     "pages": 13472,
-    "prototype": true
+    "prototype": true,
+    "appVersion": "0.2"
   },
   "tasks": [
     {
@@ -18,7 +19,16 @@
       "page": 7489,
       "issue": "Feb 01/16",
       "config": "See SRM applicability",
-      "aliases": ["ice shield", "iceshield", "айс шилд", "ледовый щит", "защитный щит", "dent ice shield", "вмятина ice shield", "повреждение ice shield"],
+      "aliases": [
+        "ice shield",
+        "iceshield",
+        "айс шилд",
+        "ледовый щит",
+        "защитный щит",
+        "dent ice shield",
+        "вмятина ice shield",
+        "повреждение ice shield"
+      ],
       "summary": "Allowable damage for LH/RH ice shield.",
       "rule": {
         "type": "iceShieldDepth",
@@ -41,7 +51,16 @@
       "page": 5457,
       "issue": "Aug 01/20",
       "config": "Be. Mod. 7900L3138",
-      "aliases": ["fuselage dent", "fwd fuselage dent", "skin dent cargo door area", "вмятина фюзеляжа", "вмятина обшивки", "обшивка возле багажной двери", "слева от багажной двери", "cargo door surround skin dent"],
+      "aliases": [
+        "fuselage dent",
+        "fwd fuselage dent",
+        "skin dent cargo door area",
+        "вмятина фюзеляжа",
+        "вмятина обшивки",
+        "обшивка возле багажной двери",
+        "слева от багажной двери",
+        "cargo door surround skin dent"
+      ],
       "summary": "Dent limits in FWD fuselage skin panels. Useful for fuselage skin around the cargo-compartment-door area after the correct structural area is identified.",
       "rule": {
         "type": "dentFormula",
@@ -67,7 +86,13 @@
       "page": 7813,
       "issue": "Aug 01/20",
       "config": "Be. Mod. 7900L3138",
-      "aliases": ["rear fuselage dent", "aft fuselage dent", "вмятина задней части фюзеляжа", "rear skin dent", "fuselage rear section"],
+      "aliases": [
+        "rear fuselage dent",
+        "aft fuselage dent",
+        "вмятина задней части фюзеляжа",
+        "rear skin dent",
+        "fuselage rear section"
+      ],
       "summary": "Dent limits in rear fuselage skin panels.",
       "rule": {
         "type": "dentFormula",
@@ -93,7 +118,13 @@
       "page": 3465,
       "issue": "Jun 01/19",
       "config": "Af. Mod. 1861N1047, Be. Mod. 5928L0778, Be. Mod. 7900L3138",
-      "aliases": ["cargo door dent", "baggage door dent", "багажная дверь вмятина", "вмятина на багажной двери", "cargo compartment door skin"],
+      "aliases": [
+        "cargo door dent",
+        "baggage door dent",
+        "багажная дверь вмятина",
+        "вмятина на багажной двери",
+        "cargo compartment door skin"
+      ],
       "summary": "Dent limits on the cargo-compartment-door skin itself.",
       "rule": {
         "type": "dentFormula",
@@ -119,7 +150,14 @@
       "page": 6451,
       "issue": "Oct 01/19",
       "config": "Af. Mod. 1861N1047, Be. Mod. 7900L3138",
-      "aliases": ["cargo door surround", "cargo compartment door surround", "обрамление багажной двери", "вокруг багажной двери", "рядом с багажной дверью", "слева от багажной двери"],
+      "aliases": [
+        "cargo door surround",
+        "cargo compartment door surround",
+        "обрамление багажной двери",
+        "вокруг багажной двери",
+        "рядом с багажной дверью",
+        "слева от багажной двери"
+      ],
       "summary": "Identification figure for cargo-compartment-door surrounding structure. Use it to identify the exact structural part before applying damage criteria."
     },
     {
@@ -131,7 +169,14 @@
       "page": 6647,
       "issue": "Jun 01/17",
       "config": "Af. Mod. 5928L0778",
-      "aliases": ["cargo door surround", "cargo compartment door surround", "обрамление багажной двери", "вокруг багажной двери", "рядом с багажной дверью", "слева от багажной двери"],
+      "aliases": [
+        "cargo door surround",
+        "cargo compartment door surround",
+        "обрамление багажной двери",
+        "вокруг багажной двери",
+        "рядом с багажной дверью",
+        "слева от багажной двери"
+      ],
       "summary": "Identification figure for cargo-compartment-door surrounding structure for this configuration."
     },
     {
@@ -143,7 +188,12 @@
       "page": 3459,
       "issue": "Jun 01/19",
       "config": "Af. Mod. 1861N1047, Be. Mod. 5928L0778, Be. Mod. 7900L3138",
-      "aliases": ["cargo door damage", "baggage door damage", "багажная дверь повреждение", "cargo compartment door"],
+      "aliases": [
+        "cargo door damage",
+        "baggage door damage",
+        "багажная дверь повреждение",
+        "cargo compartment door"
+      ],
       "summary": "General allowable-damage routing for cargo-compartment-door structure."
     }
   ]

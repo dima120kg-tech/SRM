@@ -1,23 +1,30 @@
-# masterSRM v0.1 — ATR 72
+# masterSRM v0.2 — ATR 72
 
-PWA prototype in Cockpit Navy style.
+PWA in Cockpit Navy style for fast SRM navigation on iPhone.
 
-## What works now
-- Russian/English quick search for a starter set of SRM structural-damage tasks.
+## New in v0.2
+- Interactive ATR 72 side-view locator: tap the airplane to choose FWD fuselage, Cargo Door area, Ice Shield, center fuselage, rear fuselage, wing or tail.
+- LH / RH side selector.
+- Cargo Door Area continues into a more precise choice: fuselage skin vs door and FWD/AFT/ABOVE/BELOW.
+- Home icon in the header always returns to the initial page.
+- New ATR 72-500 / SRM application icon.
+- Four-tab bottom navigation: Search / Aircraft / Damage / SRM.
+
+## Existing functions
+- Russian/English quick search for indexed SRM structural-damage tasks.
 - Damage wizard: location → structure → damage type → measurements.
-- Ice Shield depth evaluation based on SRM 535181-200-801-A01.
-- FWD/REAR fuselage skin dent evaluation using the SRM formula `allowable depth = A × 0.02`, capped at 2.0 mm, for the task condition D≥E.
-- Cargo Compartment Door skin dent evaluation using the same source task formula.
+- Ice Shield depth evaluation from SRM 535181-200-801-A01.
+- FWD/REAR fuselage skin dent evaluation for configured indexed tasks.
+- Cargo Compartment Door skin dent evaluation.
 - Cargo Door Surround identification shortcuts.
 - Local SRM PDF upload into IndexedDB; the PDF is not part of the public GitHub repo.
 - Open original PDF at the indexed physical PDF page.
-- PWA/offline shell and Cockpit Navy light/dark themes.
+- Offline PWA shell and Cockpit Navy light/dark themes.
 
 ## Important
-This is a navigation and calculation aid. Always verify aircraft configuration/effectivity and the original current approved SRM page before making a maintenance decision.
+The aircraft picture is a navigation schematic, not an SRM structural drawing. Always confirm the exact structural part, A/C configuration/effectivity and the original current approved SRM page before making a maintenance decision.
 
 ## GitHub Pages
-Upload all files/folders from this directory to the repository root, enable Pages from `main` / `(root)`, then open the site in Safari and Add to Home Screen.
+Upload all files/folders from this directory to the repository root. The service-worker cache version was changed to v0.2.0 so an installed PWA can update after deployment/reopen.
 
-## Source basis used for this prototype
-ATR72 Structural Repair Manual, Revision 110, Jun 01/21, user-provided PDF.
+Source basis: user-provided ATR72 Structural Repair Manual, Revision 110, Jun 01/21.

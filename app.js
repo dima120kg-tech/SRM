@@ -2,7 +2,8 @@ let DATA = {meta:{},tasks:[]};
 let currentView = 'searchView';
 let previousView = 'searchView';
 let selectedTask = null;
-let wizard = {step:1, zone:null, structure:null, position:null, damage:null, measurements:{}};
+let wizard = {step:1, side:'LH', zone:null, structure:null, position:null, damage:null, measurements:{}};
+let locator = {side:'LH', zone:null};
 let currentPdfUrl = null;
 
 const $ = s => document.querySelector(s);
@@ -15,14 +16,19 @@ async function init(){
   restorePrefs();
   bindUI();
   await updateDocumentStatus();
+  renderLocator();
   renderWizard();
   if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 }
 
 function bindUI(){
   $$('.nav-item').forEach(btn=>btn.addEventListener('click',()=>showView(btn.dataset.view)));
+  $('#homeBtn').addEventListener('click',goHome);
   $('#settingsBtn').addEventListener('click',()=>{ previousView=currentView; showView('settingsView', false); });
   $('#settingsBack').addEventListener('click',()=>showView(previousView,false));
+  $('#locatorBack').addEventListener('click',()=>showView('searchView'));
+  $('#openLocatorBtn').addEventListener('click',()=>{ locator.zone=null; locator.side=wizard.side||'LH'; showView('locatorView'); });
+  $$('.side-btn').forEach(btn=>btn.addEventListener('click',()=>{ locator.side=btn.dataset.side; $$('.side-btn').forEach(x=>x.classList.toggle('active',x.dataset.side===locator.side)); renderLocator(); }));
   $('#wizardBack').addEventListener('click',()=>{
     if(wizard.step>1){ wizard.step--; renderWizard(); } else showView('searchView');
   });
@@ -49,12 +55,19 @@ function showView(id, updateNav=true){
   $$('.view').forEach(v=>v.classList.remove('active'));
   $('#'+id).classList.add('active');
   currentView=id;
-  if(updateNav){
-    $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===id));
-  }
+  if(updateNav){ $$('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===id)); }
   window.scrollTo({top:0,behavior:'auto'});
   if(id==='wizardView') renderWizard();
+  if(id==='locatorView') renderLocator();
   if(id==='documentView') updateDocumentStatus();
+}
+
+function goHome(){
+  $('#searchInput').value='';
+  search('');
+  locator.zone=null;
+  resetWizard(false);
+  showView('searchView');
 }
 
 function normalize(s=''){
@@ -85,7 +98,7 @@ function search(q){
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,12);
   $('#resultsCount').textContent=scored.length;
   $('#resultsTitle').textContent = n.includes('cargo') && n.includes('door') ? 'Найдено по Cargo Door' : 'Результаты';
-  $('#resultsList').innerHTML=scored.length?scored.map(x=>taskCard(x.t)).join(''):`<div class="info-card"><strong>Точного совпадения пока нет</strong><p>Попробуй: “ice shield dent”, “вмятина обшивки возле багажной двери”, “cargo door dent”, “rear fuselage dent”.</p></div>`;
+  $('#resultsList').innerHTML=scored.length?scored.map(x=>taskCard(x.t)).join(''):`<div class="info-card"><strong>Точного совпадения пока нет</strong><p>Попробуй выбрать место на самолёте или запрос: “ice shield dent”, “вмятина обшивки возле багажной двери”, “cargo door dent”, “rear fuselage dent”.</p></div>`;
   $('#resultsList').querySelectorAll('[data-task]').forEach(b=>b.addEventListener('click',()=>openTask(b.dataset.task)));
   resultsPanel.classList.remove('hidden'); start.classList.add('hidden');
 }
@@ -98,29 +111,116 @@ function taskCard(t){
 function quickPreset(type){
   if(type==='ice-shield'){ openTask('ice-shield-damage'); return; }
   if(type==='cargo-door'){ openTask('cargo-door-dent'); return; }
-  resetWizard();
+  resetWizard(false);
   if(type==='cargo-area'){ wizard.zone='cargo-area'; wizard.step=2; }
-  if(type==='fuselage'){ wizard.zone='fuselage'; wizard.step=2; }
+  if(type==='fuselage'){ wizard.zone='fwd'; wizard.structure='skin'; wizard.step=3; }
   showView('wizardView');
 }
 
-function resetWizard(){ wizard={step:1,zone:null,structure:null,position:null,damage:null,measurements:{}}; renderWizard(); }
+function planeSvg(selected=null, compact=false){
+  const selectedClass=z=>selected===z?' selected':'';
+  return `<svg class="plane-map${compact?' compact':''}" viewBox="0 0 820 330" role="img" aria-label="Интерактивная схема ATR 72. Нажми на область самолёта.">
+    <defs>
+      <linearGradient id="fuseGrad" x1="0" x2="1"><stop offset="0" stop-color="#f8fbff"/><stop offset=".55" stop-color="#d9e5ef"/><stop offset="1" stop-color="#afc0cf"/></linearGradient>
+      <linearGradient id="wingGrad" x1="0" x2="1"><stop offset="0" stop-color="#dce7f1"/><stop offset="1" stop-color="#9fb2c4"/></linearGradient>
+    </defs>
+    <g class="aircraft-art" aria-hidden="true">
+      <path class="airframe fuselage-shape" d="M76 164 C92 123 140 108 222 108 H610 C661 108 706 124 749 151 C770 165 774 181 753 195 C714 220 662 229 602 229 H215 C143 229 99 213 79 187 C71 177 70 172 76 164 Z" fill="url(#fuseGrad)"/>
+      <path class="airframe tail-fin" d="M638 112 L686 44 L716 48 L703 139 Z" fill="url(#wingGrad)"/>
+      <path class="airframe tailplane" d="M644 146 L760 118 L773 127 L700 163 Z" fill="url(#wingGrad)"/>
+      <path class="airframe wing-shape" d="M363 124 L530 43 L566 51 L466 151 L568 257 L531 265 L361 194 Z" fill="url(#wingGrad)"/>
+      <rect x="352" y="91" width="67" height="34" rx="14" fill="#aebdca"/>
+      <rect x="487" y="91" width="67" height="34" rx="14" fill="#aebdca"/>
+      <circle cx="360" cy="108" r="42" class="prop-disc"/><circle cx="495" cy="108" r="42" class="prop-disc"/>
+      <circle cx="360" cy="108" r="8" fill="#22364a"/><circle cx="495" cy="108" r="8" fill="#22364a"/>
+      <path d="M98 154 L126 140 L149 140 L158 159 Z" fill="#35546e" opacity=".9"/>
+      <rect x="190" y="137" width="24" height="53" rx="4" class="door-outline"/>
+      <rect x="234" y="141" width="31" height="43" rx="4" class="door-outline cargo-outline"/>
+      <g class="windows">${Array.from({length:15},(_,i)=>`<rect x="${284+i*20}" y="145" width="10" height="16" rx="5"/>`).join('')}</g>
+      <path d="M327 190 C358 199 420 200 453 190" class="ice-line"/>
+    </g>
+    <g class="plane-zone${selectedClass('fwd')}" data-zone="fwd" tabindex="0" role="button" aria-label="Передняя часть фюзеляжа"><rect class="zone-hit" x="72" y="112" width="188" height="118" rx="35"/><text x="135" y="101">FWD</text></g>
+    <g class="plane-zone${selectedClass('cargo-area')}" data-zone="cargo-area" tabindex="0" role="button" aria-label="Район багажной двери"><rect class="zone-hit cargo-hit" x="214" y="124" width="82" height="86" rx="18"/><text x="220" y="246">CARGO AREA</text></g>
+    <g class="plane-zone${selectedClass('ice-shield')}" data-zone="ice-shield" tabindex="0" role="button" aria-label="Ice shield"><rect class="zone-hit ice-hit" x="318" y="174" width="144" height="62" rx="22"/><text x="342" y="254">ICE SHIELD</text></g>
+    <g class="plane-zone${selectedClass('center')}" data-zone="center" tabindex="0" role="button" aria-label="Центральная часть фюзеляжа"><rect class="zone-hit" x="295" y="118" width="184" height="70" rx="24"/><text x="346" y="101">CENTER</text></g>
+    <g class="plane-zone${selectedClass('rear')}" data-zone="rear" tabindex="0" role="button" aria-label="Задняя часть фюзеляжа"><rect class="zone-hit" x="480" y="116" width="170" height="112" rx="30"/><text x="532" y="101">REAR</text></g>
+    <g class="plane-zone${selectedClass('tail')}" data-zone="tail" tabindex="0" role="button" aria-label="Хвостовое оперение"><rect class="zone-hit" x="630" y="40" width="145" height="145" rx="28"/><text x="668" y="31">TAIL</text></g>
+    <g class="plane-zone wing-zone${selectedClass('wing')}" data-zone="wing" tabindex="0" role="button" aria-label="Крыло"><path class="zone-hit wing-hit" d="M340 114 L544 28 L588 45 L475 164 L592 272 L538 286 L337 198 Z"/><text x="470" y="296">WING</text></g>
+  </svg>`;
+}
+
+const zoneInfo={
+  fwd:{title:'FWD Fuselage',sub:'Передняя часть фюзеляжа',next:'skin'},
+  'cargo-area':{title:'Cargo Door Area',sub:'Обшивка и структура вокруг багажной двери',next:'cargo'},
+  'ice-shield':{title:'Ice Shield',sub:'Зона металлического защитного щита',next:'ice'},
+  center:{title:'Center Fuselage',sub:'Центральная часть фюзеляжа',next:'skin'},
+  rear:{title:'Rear Fuselage',sub:'Задняя часть фюзеляжа',next:'skin'},
+  wing:{title:'Wing',sub:'Крыло / wing structure',next:'search'},
+  tail:{title:'Tail / Empennage',sub:'Хвостовое оперение',next:'search'}
+};
+
+function renderLocator(){
+  if(!$('#locatorBody')) return;
+  $$('.side-btn').forEach(x=>x.classList.toggle('active',x.dataset.side===locator.side));
+  const info=locator.zone?zoneInfo[locator.zone]:null;
+  $('#locatorBody').innerHTML=`
+    <div class="aircraft-map-card">
+      <div class="map-help"><strong>${locator.side} SIDE</strong><span>Нажми пальцем на повреждённую область</span></div>
+      ${planeSvg(locator.zone)}
+      <div class="map-legend"><span><i></i>активные зоны</span><small>схема для навигации, не технический чертёж</small></div>
+    </div>
+    ${info?`<div class="selection-card"><div><span class="eyebrow">ВЫБРАНО</span><h3>${info.title}</h3><p>${info.sub} · ${locator.side}</p></div><button class="primary-action" id="locatorContinue">Продолжить</button></div>`:`<div class="info-card"><strong>Как пользоваться</strong><p>Например, если вмятина слева от Cargo Door — нажми область вокруг двери. На следующем экране выберешь: сама дверь или fuselage skin, затем FWD/AFT/ABOVE/BELOW.</p></div>`}
+  `;
+  bindPlaneZones('#locatorBody',z=>{ locator.zone=z; renderLocator(); });
+  $('#locatorContinue')?.addEventListener('click',continueFromLocator);
+}
+
+function bindPlaneZones(scope,handler){
+  $$(scope+' .plane-zone').forEach(el=>{
+    el.addEventListener('click',()=>handler(el.dataset.zone));
+    el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); handler(el.dataset.zone); } });
+  });
+}
+
+function continueFromLocator(){
+  const z=locator.zone; if(!z) return;
+  resetWizard(false); wizard.side=locator.side;
+  if(z==='cargo-area'){ wizard.zone='cargo-area'; wizard.step=2; }
+  else if(z==='ice-shield'){ wizard.zone='ice-shield'; wizard.structure='ice'; wizard.step=3; }
+  else if(z==='rear'){ wizard.zone='rear'; wizard.structure='skin'; wizard.step=3; }
+  else if(z==='fwd'||z==='center'){ wizard.zone='fwd'; wizard.structure='skin'; wizard.step=3; }
+  else {
+    const q=z==='wing'?'wing damage':'tail empennage damage';
+    showView('searchView'); $('#searchInput').value=q; search(q); toast('Для этой зоны пока открываю поиск SRM'); return;
+  }
+  showView('wizardView');
+}
+
+function resetWizard(render=true){ wizard={step:1,side:locator.side||'LH',zone:null,structure:null,position:null,damage:null,measurements:{}}; if(render) renderWizard(); }
 
 function renderWizard(){
   if(!$('#wizardBody')) return;
   $('#wizardStep').textContent=`${Math.min(wizard.step,4)} / 4`;
   const body=$('#wizardBody');
   if(wizard.step===1){
-    body.innerHTML=`<div class="aircraft-card"><strong>ATR 72 · LOCATION</strong><div class="aircraft-side"><div class="fuselage"></div><div class="wing"></div><div class="tail"></div><div class="cargo-door-marker"></div><div class="zone-label">CARGO DOOR AREA</div></div></div><div class="wizard-question">Выбери область</div><div class="choice-grid">${choice('zone','cargo-area','Cargo Door Area','обшивка рядом с багажной дверью')}${choice('zone','ice-shield','Ice Shield','защитный щит фюзеляжа')}${choice('zone','fwd','FWD Fuselage','передняя часть фюзеляжа')}${choice('zone','rear','Rear Fuselage','задняя часть фюзеляжа')}</div>`;
+    body.innerHTML=`<div class="aircraft-map-card compact-map"><div class="map-help"><strong>ATR 72 · ${wizard.side}</strong><span>Ткни область прямо на самолёте</span></div>${planeSvg(wizard.zone,true)}</div><div class="wizard-question">Или выбери область кнопкой</div><div class="choice-grid">${choice('zone','cargo-area','Cargo Door Area','обшивка рядом с багажной дверью')}${choice('zone','ice-shield','Ice Shield','защитный щит фюзеляжа')}${choice('zone','fwd','FWD Fuselage','передняя часть фюзеляжа')}${choice('zone','rear','Rear Fuselage','задняя часть фюзеляжа')}</div>`;
+    bindPlaneZones('#wizardBody',z=>{
+      if(z==='tail'||z==='wing'){ locator.zone=z; locator.side=wizard.side; showView('locatorView'); return; }
+      wizard.zone=z==='center'?'fwd':z;
+      if(z==='ice-shield'){ wizard.structure='ice'; wizard.step=3; }
+      else if(z==='fwd'||z==='rear'||z==='center'){ wizard.structure='skin'; wizard.step=3; }
+      else wizard.step=2;
+      renderWizard();
+    });
   } else if(wizard.step===2){
-    body.innerHTML=`<div class="wizard-question">Что именно повреждено?</div><div class="choice-grid">${choice('structure','skin','Fuselage Skin','обшивка самолёта')}${choice('structure','door','Cargo Door','сама багажная дверь')}${choice('structure','ice','Ice Shield','металлический щит')}${choice('structure','unknown','Не уверен','показать Identification')}</div>${wizard.zone==='cargo-area'?`<div class="panel"><strong>Положение относительно двери</strong><div class="choice-grid" style="margin-top:10px">${choice('position','fwd','FWD','перед дверью')}${choice('position','aft','AFT','за дверью')}${choice('position','above','ABOVE','над дверью')}${choice('position','below','BELOW','под дверью')}</div></div>`:''}`;
+    body.innerHTML=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||wizard.zone}</strong></div><div class="wizard-question">Что именно повреждено?</div><div class="choice-grid">${choice('structure','skin','Fuselage Skin','обшивка самолёта')}${choice('structure','door','Cargo Door','сама багажная дверь')}${choice('structure','ice','Ice Shield','металлический щит')}${choice('structure','unknown','Не уверен','показать Identification')}</div>${wizard.zone==='cargo-area'?`<div class="panel"><strong>Положение относительно двери</strong><div class="choice-grid" style="margin-top:10px">${choice('position','fwd','FWD','перед дверью')}${choice('position','aft','AFT','за дверью')}${choice('position','above','ABOVE','над дверью')}${choice('position','below','BELOW','под дверью')}</div></div>`:''}`;
   } else if(wizard.step===3){
-    body.innerHTML=`<div class="wizard-question">Тип повреждения</div><div class="choice-grid">${choice('damage','dent','Dent','вмятина')}${choice('damage','scratch','Scratch / Score','царапина / риска')}${choice('damage','crack','Crack','трещина')}${choice('damage','corrosion','Corrosion','коррозия')}</div>`;
+    body.innerHTML=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||wizard.zone}</strong><small>${wizard.position?wizard.position.toUpperCase():''}</small></div><div class="wizard-question">Тип повреждения</div><div class="choice-grid">${choice('damage','dent','Dent','вмятина')}${choice('damage','scratch','Scratch / Score','царапина / риска')}${choice('damage','crack','Crack','трещина')}${choice('damage','corrosion','Corrosion','коррозия')}</div>`;
   } else {
     const target=resolveWizardTask();
     if(!target){
-      body.innerHTML=`<div class="info-card"><strong>Для этой комбинации автоматическое правило ещё не настроено</strong><p>Открой поиск SRM по ключевым словам или выбери Identification. В следующих версиях добавим остальные damage types.</p></div><div class="wizard-actions"><button class="secondary-action" id="wizRestart">Сначала</button><button class="primary-action" id="wizSearch">Искать в базе</button></div>`;
-      $('#wizRestart').onclick=resetWizard; $('#wizSearch').onclick=()=>{ showView('searchView'); $('#searchInput').value=`${wizard.damage||''} ${wizard.structure||''} ${wizard.zone||''}`; search($('#searchInput').value); };
+      body.innerHTML=`<div class="info-card"><strong>Для этой комбинации автоматическое правило ещё не настроено</strong><p>Открой поиск SRM по ключевым словам или Identification. Приложение не будет придумывать limit, которого нет в индексе.</p></div><div class="wizard-actions"><button class="secondary-action" id="wizRestart">Сначала</button><button class="primary-action" id="wizSearch">Искать в базе</button></div>`;
+      $('#wizRestart').onclick=()=>resetWizard(); $('#wizSearch').onclick=()=>{ showView('searchView'); $('#searchInput').value=`${wizard.damage||''} ${wizard.structure||''} ${wizard.zone||''}`; search($('#searchInput').value); };
       return;
     }
     selectedTask=target;
@@ -138,8 +238,13 @@ function choice(group,value,title,sub){
 function bindChoices(){
   $$('#wizardBody .choice').forEach(b=>b.addEventListener('click',()=>{
     const g=b.dataset.group,v=b.dataset.value; wizard[g]=v;
-    if(g==='zone'){ wizard.step=2; }
+    if(g==='zone'){
+      if(v==='ice-shield'){ wizard.structure='ice'; wizard.step=3; }
+      else if(v==='fwd'||v==='rear'){ wizard.structure='skin'; wizard.step=3; }
+      else wizard.step=2;
+    }
     else if(g==='structure'){
+      if(v==='unknown'){ openIdentification(); return; }
       if(v==='ice'){ wizard.zone='ice-shield'; wizard.step=3; }
       else wizard.step=wizard.zone==='cargo-area' && !wizard.position ? 2 : 3;
     }
@@ -160,8 +265,9 @@ function resolveWizardTask(){
 }
 
 function measurementForm(t){
-  if(t.rule?.type==='iceShieldDepth') return `<div class="detail-hero"><div class="ata">ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div><div class="panel"><div class="wizard-question">Введи измерение</div><div class="field"><label>Глубина повреждения, mm</label><input id="depthMm" inputmode="decimal" placeholder="например 5.5"></div></div><div class="wizard-actions"><button class="secondary-action" id="openTaskDirect">Условия</button><button class="primary-action" id="evaluateBtn">Проверить</button></div>`;
-  return `<div class="detail-hero"><div class="ata">ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div><div class="panel"><div class="wizard-question">Нужны 2 значения</div><div class="measure-grid"><div class="field"><label>A — до ближайшей кромки stiffener, mm</label><input id="aMm" inputmode="decimal" placeholder="например 60"></div><div class="field"><label>Фактическая глубина dent, mm</label><input id="depthMm" inputmode="decimal" placeholder="например 1.0"></div></div><div class="field" style="margin-top:10px"><label>Положение dent относительно stiffener</label><select id="deCond"><option value="unknown">Не уверен</option><option value="valid">D ≥ E — dent не заходит на stiffener</option><option value="invalid">D &lt; E — dent распространяется на stiffener</option></select></div><div class="source-note">Если E нельзя определить, SRM указывает использовать E = 13 mm как reference measuring point для A.</div></div><div class="wizard-actions"><button class="secondary-action" id="openTaskDirect">Условия</button><button class="primary-action" id="evaluateBtn">Проверить</button></div>`;
+  const loc=`<div class="location-summary"><span class="badge">${wizard.side}</span><strong>${zoneInfo[wizard.zone]?.title||''}</strong>${wizard.position?`<small>${wizard.position.toUpperCase()}</small>`:''}</div>`;
+  if(t.rule?.type==='iceShieldDepth') return `${loc}<div class="detail-hero"><div class="ata">ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div><div class="panel"><div class="wizard-question">Введи измерение</div><div class="field"><label>Глубина повреждения, mm</label><input id="depthMm" inputmode="decimal" placeholder="например 5.5"></div></div><div class="wizard-actions"><button class="secondary-action" id="openTaskDirect">Условия</button><button class="primary-action" id="evaluateBtn">Проверить</button></div>`;
+  return `${loc}<div class="detail-hero"><div class="ata">ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div><div class="panel"><div class="wizard-question">Нужны 2 значения</div><div class="measure-grid"><div class="field"><label>A — до ближайшей кромки stiffener, mm</label><input id="aMm" inputmode="decimal" placeholder="например 60"></div><div class="field"><label>Фактическая глубина dent, mm</label><input id="depthMm" inputmode="decimal" placeholder="например 1.0"></div></div><div class="field" style="margin-top:10px"><label>Положение dent относительно stiffener</label><select id="deCond"><option value="unknown">Не уверен</option><option value="valid">D ≥ E — dent не заходит на stiffener</option><option value="invalid">D &lt; E — dent распространяется на stiffener</option></select></div><div class="source-note">Если E нельзя определить, SRM указывает использовать E = 13 mm как reference measuring point для A.</div></div><div class="wizard-actions"><button class="secondary-action" id="openTaskDirect">Условия</button><button class="primary-action" id="evaluateBtn">Проверить</button></div>`;
 }
 
 function numVal(id){ const v=parseFloat(($(id)?.value||'').replace(',','.')); return Number.isFinite(v)?v:null; }
@@ -179,13 +285,13 @@ function openTask(id, fromWizard=false, evalData=null){
   showView('detailView',false);
   $('#openPdfBtn')?.addEventListener('click',()=>openPdfAt(t.page));
   $('#openRepairBtn')?.addEventListener('click',()=>toast(`Repair task: ${t.repairTask}`));
-  $('#evaluateAgainBtn')?.addEventListener('click',()=>{ wizard.zone=t.id.includes('ice')?'ice-shield':'fwd'; wizard.structure=t.id.includes('cargo-door-dent')?'door':t.id.includes('ice')?'ice':'skin'; wizard.damage='dent'; wizard.step=4; showView('wizardView'); });
+  $('#evaluateAgainBtn')?.addEventListener('click',()=>{ wizard.zone=t.id.includes('ice')?'ice-shield':t.id.includes('rear')?'rear':'fwd'; wizard.structure=t.id.includes('cargo-door-dent')?'door':t.id.includes('ice')?'ice':'skin'; wizard.damage='dent'; wizard.step=4; showView('wizardView'); });
   $('#findIdentificationBtn')?.addEventListener('click',()=>openIdentification());
 }
 
 function detailHTML(t,evalData){
   const label=t.kind==='identification'?'IDENTIFICATION':'ALLOWABLE DAMAGE';
-  return `<div class="detail-hero"><div class="ata">${label} · ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div>${evaluationBlock(t,evalData)}<div class="panel"><div class="section-heading"><span>Условия</span></div>${(t.conditions?.length?`<ul class="condition-list">${t.conditions.map(x=>`<li>${x}</li>`).join('')}</ul>`:`<p class="muted">Используй этот Identification task, чтобы точно определить structural part и effectivity перед применением damage limits.</p>`)}<div class="meta-row"><span class="meta-pill">PDF page ${t.page}</span><span class="meta-pill">${t.issue}</span><span class="meta-pill">${t.config}</span></div></div><div class="detail-actions">${t.kind==='allowable'&&t.rule?`<button class="secondary-action" id="evaluateAgainBtn">Ввести / изменить размеры</button>`:''}${t.id==='fwd-fuselage-skin-dent'?`<button class="secondary-action" id="findIdentificationBtn">Identification · Cargo Door Surround</button>`:''}${t.repairTask?`<button class="secondary-action" id="openRepairBtn">Repair reference · ${t.repairTask}</button>`:''}<button class="primary-action" id="openPdfBtn">Оригинал SRM · PDF ${t.page}</button></div><div class="source-note">Проверь A/C configuration и applicability на оригинальной странице SRM перед использованием результата.</div>`;
+  return `<div class="detail-hero"><div class="ata">${label} · ATA ${t.ata}</div><h2>${t.title}</h2><div class="task">${t.task}</div></div>${evaluationBlock(t,evalData)}<div class="panel"><div class="section-heading"><span>Условия</span></div>${(t.conditions?.length?`<ul class="condition-list">${t.conditions.map(x=>`<li>${x}</li>`).join('')}</ul>`:`<p class="muted">Используй этот Identification task, чтобы точно определить structural part и effectivity перед применением damage limits.</p>`)}<div class="meta-row"><span class="meta-pill">PDF page ${t.page}</span><span class="meta-pill">${t.issue}</span><span class="meta-pill">${t.config}</span></div></div><div class="detail-actions">${t.kind==='allowable'&&t.rule?`<button class="secondary-action" id="evaluateAgainBtn">Ввести / изменить размеры</button>`:''}${t.id==='fwd-fuselage-skin-dent'?`<button class="secondary-action" id="findIdentificationBtn">Identification · Cargo Door Surround</button>`:''}${t.repairTask?`<button class="secondary-action" id="openRepairBtn">Repair reference · ${t.repairTask}</button>`:''}<button class="primary-action" id="openPdfBtn">Оригинал SRM · PDF ${t.page}</button></div><div class="source-note">Проверь A/C configuration, точную structural part и applicability на оригинальной странице SRM перед использованием результата.</div>`;
 }
 
 function evaluationBlock(t,d){
