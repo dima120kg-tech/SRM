@@ -1,0 +1,150 @@
+{
+  "meta": {
+    "aircraft": "ATR72",
+    "document": "Structural Repair Manual",
+    "shortName": "SRM",
+    "revision": "110",
+    "revisionDate": "Jun 01/21",
+    "pages": 13472,
+    "prototype": true
+  },
+  "tasks": [
+    {
+      "id": "ice-shield-damage",
+      "ata": "53-51-81",
+      "task": "535181-200-801-A01",
+      "kind": "allowable",
+      "title": "ICE SHIELD LH/RH",
+      "page": 7489,
+      "issue": "Feb 01/16",
+      "config": "See SRM applicability",
+      "aliases": ["ice shield", "iceshield", "айс шилд", "ледовый щит", "защитный щит", "dent ice shield", "вмятина ice shield", "повреждение ice shield"],
+      "summary": "Allowable damage for LH/RH ice shield.",
+      "rule": {
+        "type": "iceShieldDepth",
+        "maxDepthMm": 8,
+        "inspectSkinAboveMm": 6
+      },
+      "conditions": [
+        "Maximum allowable damage depth on the ice shield: 8 mm (0.315 in.).",
+        "If damage depth is greater than 6 mm (0.236 in.), inspect the fuselage skin below the ice shield for possible impact signs."
+      ],
+      "repairTask": "535181-300-801-A01",
+      "repairTitle": "REPAIRS FOR METALLIC ICE SHIELD"
+    },
+    {
+      "id": "fwd-fuselage-skin-dent",
+      "ata": "53-31-00",
+      "task": "533100-200-804-A01",
+      "kind": "allowable",
+      "title": "FUSELAGE FWD SECTION STRUCTURE — ALLOWABLE DENTS IN SKIN PANELS",
+      "page": 5457,
+      "issue": "Aug 01/20",
+      "config": "Be. Mod. 7900L3138",
+      "aliases": ["fuselage dent", "fwd fuselage dent", "skin dent cargo door area", "вмятина фюзеляжа", "вмятина обшивки", "обшивка возле багажной двери", "слева от багажной двери", "cargo door surround skin dent"],
+      "summary": "Dent limits in FWD fuselage skin panels. Useful for fuselage skin around the cargo-compartment-door area after the correct structural area is identified.",
+      "rule": {
+        "type": "dentFormula",
+        "factor": 0.02,
+        "capMm": 2.0,
+        "validCondition": "D≥E",
+        "minEIfUnknownMm": 13
+      },
+      "conditions": [
+        "A = distance between the dent and the closest stiffener edge line.",
+        "Allowable dent depth = A × 0.02, but cannot exceed 2.0 mm at any point of the skin panel.",
+        "This task is valid for D≥E. If D<E, inspect the stiffener and contact the manufacturer for further instructions.",
+        "If E cannot be identified, use minimum E = 13 mm as the reference measuring point for A.",
+        "Do not fill dents which exceed the allowable limits."
+      ]
+    },
+    {
+      "id": "rear-fuselage-skin-dent",
+      "ata": "53-61-00",
+      "task": "536100-200-805-A01",
+      "kind": "allowable",
+      "title": "FUSELAGE REAR SECTION STRUCTURE — ALLOWABLE DENTS IN SKIN PANELS",
+      "page": 7813,
+      "issue": "Aug 01/20",
+      "config": "Be. Mod. 7900L3138",
+      "aliases": ["rear fuselage dent", "aft fuselage dent", "вмятина задней части фюзеляжа", "rear skin dent", "fuselage rear section"],
+      "summary": "Dent limits in rear fuselage skin panels.",
+      "rule": {
+        "type": "dentFormula",
+        "factor": 0.02,
+        "capMm": 2.0,
+        "validCondition": "D≥E",
+        "minEIfUnknownMm": 13
+      },
+      "conditions": [
+        "A = distance between the dent and the closest stiffener edge line.",
+        "Allowable dent depth = A × 0.02, but cannot exceed 2.0 mm at any point of the skin panel.",
+        "This task is valid for D≥E. If D<E, inspect the stiffener and contact the manufacturer for further instructions.",
+        "If E cannot be identified, use minimum E = 13 mm as the reference measuring point for A.",
+        "Do not fill dents which exceed the allowable limits."
+      ]
+    },
+    {
+      "id": "cargo-door-dent",
+      "ata": "52-31-00",
+      "task": "523100-200-806-A01",
+      "kind": "allowable",
+      "title": "CARGO COMPARTMENT DOOR — ALLOWABLE DENTS IN SKIN PANELS",
+      "page": 3465,
+      "issue": "Jun 01/19",
+      "config": "Af. Mod. 1861N1047, Be. Mod. 5928L0778, Be. Mod. 7900L3138",
+      "aliases": ["cargo door dent", "baggage door dent", "багажная дверь вмятина", "вмятина на багажной двери", "cargo compartment door skin"],
+      "summary": "Dent limits on the cargo-compartment-door skin itself.",
+      "rule": {
+        "type": "dentFormula",
+        "factor": 0.02,
+        "capMm": 2.0,
+        "validCondition": "D≥E",
+        "minEIfUnknownMm": 13
+      },
+      "conditions": [
+        "A = distance between the dent and the closest stiffener edge line.",
+        "Allowable dent depth = A × 0.02, but cannot exceed 2.0 mm at any point of the skin panel.",
+        "This task is valid for D≥E. If D<E, inspect the stiffener and contact the manufacturer for further instructions.",
+        "If E cannot be identified, use minimum E = 13 mm as the reference measuring point for A.",
+        "Do not fill dents which exceed the allowable limits."
+      ]
+    },
+    {
+      "id": "cargo-surround-id-af1861",
+      "ata": "53-37-80",
+      "task": "533780-14-A01",
+      "kind": "identification",
+      "title": "MISCELLANEOUS — CARGO COMPARTMENT DOOR SURROUND",
+      "page": 6451,
+      "issue": "Oct 01/19",
+      "config": "Af. Mod. 1861N1047, Be. Mod. 7900L3138",
+      "aliases": ["cargo door surround", "cargo compartment door surround", "обрамление багажной двери", "вокруг багажной двери", "рядом с багажной дверью", "слева от багажной двери"],
+      "summary": "Identification figure for cargo-compartment-door surrounding structure. Use it to identify the exact structural part before applying damage criteria."
+    },
+    {
+      "id": "cargo-surround-id-af5928",
+      "ata": "53-37-80",
+      "task": "533780-52-A01",
+      "kind": "identification",
+      "title": "MISCELLANEOUS — CARGO COMPARTMENT DOOR SURROUND",
+      "page": 6647,
+      "issue": "Jun 01/17",
+      "config": "Af. Mod. 5928L0778",
+      "aliases": ["cargo door surround", "cargo compartment door surround", "обрамление багажной двери", "вокруг багажной двери", "рядом с багажной дверью", "слева от багажной двери"],
+      "summary": "Identification figure for cargo-compartment-door surrounding structure for this configuration."
+    },
+    {
+      "id": "cargo-door-general",
+      "ata": "52-31-00",
+      "task": "523100-200-801-A01",
+      "kind": "allowable",
+      "title": "CARGO COMPARTMENT DOOR — GENERAL ALLOWABLE DAMAGE",
+      "page": 3459,
+      "issue": "Jun 01/19",
+      "config": "Af. Mod. 1861N1047, Be. Mod. 5928L0778, Be. Mod. 7900L3138",
+      "aliases": ["cargo door damage", "baggage door damage", "багажная дверь повреждение", "cargo compartment door"],
+      "summary": "General allowable-damage routing for cargo-compartment-door structure."
+    }
+  ]
+}

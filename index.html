@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F2742" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="masterSRM" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="app.css" />
+  <title>masterSRM — ATR 72</title>
+</head>
+<body>
+  <div class="app-shell" id="app">
+    <header class="topbar">
+      <div>
+        <div class="brand">master<span>SRM</span></div>
+        <div class="revision-line" id="revisionLine">ATR 72 · SRM Rev. 110 · Jun 01/21</div>
+      </div>
+      <button class="icon-btn" id="settingsBtn" aria-label="Settings">⚙︎</button>
+    </header>
+
+    <main id="searchView" class="view active">
+      <section class="hero">
+        <div class="eyebrow">STRUCTURAL DAMAGE FINDER</div>
+        <h1>Где повреждение?</h1>
+        <p>Опиши место и тип повреждения обычными словами — приложение подберёт SRM task, условия и оригинальную страницу.</p>
+        <div class="search-box">
+          <span class="search-icon">⌕</span>
+          <input id="searchInput" placeholder="например: вмятина слева от багажной двери" autocomplete="off" />
+          <button id="clearSearch" class="clear-btn" aria-label="Clear">×</button>
+        </div>
+      </section>
+
+      <section class="quick-grid" id="quickGrid">
+        <button class="quick-card" data-preset="cargo-area">
+          <span class="quick-icon">◫</span><strong>Рядом с Cargo Door</strong><small>обшивка фюзеляжа / surround</small>
+        </button>
+        <button class="quick-card" data-preset="ice-shield">
+          <span class="quick-icon">◇</span><strong>Ice Shield</strong><small>dent / impact</small>
+        </button>
+        <button class="quick-card" data-preset="fuselage">
+          <span class="quick-icon">▱</span><strong>Fuselage Skin</strong><small>FWD / REAR section</small>
+        </button>
+        <button class="quick-card" data-preset="cargo-door">
+          <span class="quick-icon">▣</span><strong>Cargo Door</strong><small>повреждение самой двери</small>
+        </button>
+      </section>
+
+      <section id="searchResults" class="content-stack hidden">
+        <div class="section-heading"><span id="resultsTitle">Результаты</span><span id="resultsCount" class="muted"></span></div>
+        <div id="resultsList" class="card-list"></div>
+      </section>
+
+      <section id="startPanel" class="content-stack">
+        <div class="section-heading"><span>Быстрый мастер повреждения</span></div>
+        <button class="primary-action" id="startWizardBtn">Начать по месту повреждения</button>
+        <div class="info-card compact">
+          <strong>Прототип v0.1</strong>
+          <p>Сейчас полностью настроены: Ice Shield, dents на обшивке FWD/REAR fuselage и dents на Cargo Compartment Door. Остальные зоны будут добавляться по SRM постепенно.</p>
+        </div>
+      </section>
+    </main>
+
+    <main id="wizardView" class="view">
+      <div class="detail-nav"><button class="back-btn" id="wizardBack">‹ <span>Назад</span></button><span class="step-chip" id="wizardStep">1 / 4</span></div>
+      <div class="page-title">Мастер повреждения</div>
+      <div id="wizardBody"></div>
+    </main>
+
+    <main id="detailView" class="view">
+      <div class="detail-nav"><button class="back-btn" id="detailBack">‹ <span>Назад</span></button></div>
+      <div id="detailContent"></div>
+    </main>
+
+    <main id="documentView" class="view">
+      <div class="page-title">SRM на устройстве</div>
+      <div id="documentStatus"></div>
+      <button class="primary-action" id="uploadBtn">Загрузить SRM PDF</button>
+      <input type="file" id="pdfInput" accept="application/pdf,.pdf" hidden />
+      <div class="info-card">
+        <strong>Локальное хранение</strong>
+        <p>PDF сохраняется в браузере на этом iPhone через IndexedDB. Файл не отправляется на GitHub и не загружается на сервер.</p>
+      </div>
+      <div class="settings-card">
+        <div class="settings-row stack">
+          <div><strong>Конфигурация самолёта</strong><small>Нужна для выбора правильной effectivity.</small></div>
+          <select id="configSelect">
+            <option value="unknown">Не выбрана</option>
+            <option value="be1861">Be. Mod. 1861N1047</option>
+            <option value="af1861">Af. Mod. 1861N1047, Be. Mod. 7900L3138</option>
+            <option value="af5928">Af. Mod. 5928L0778</option>
+            <option value="freighter">Af. Mod. 7900L3138 · Freighter</option>
+          </select>
+        </div>
+      </div>
+    </main>
+
+    <main id="settingsView" class="view">
+      <div class="detail-nav"><button class="back-btn" id="settingsBack">‹ <span>Назад</span></button></div>
+      <div class="page-title">Настройки</div>
+      <div class="settings-card">
+        <div class="settings-row"><div><strong>Тёмная тема</strong><small>Cockpit Navy Dark</small></div><label class="switch"><input id="darkToggle" type="checkbox"><span></span></label></div>
+        <div class="settings-row"><div><strong>Крупный текст</strong><small>Увеличить текст условий</small></div><label class="switch"><input id="largeToggle" type="checkbox"><span></span></label></div>
+      </div>
+      <div class="info-card"><strong>Важно</strong><p>masterSRM — навигатор по SRM. Перед техническим решением проверь applicability и исходный текст текущей утверждённой ревизии.</p></div>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-view="searchView"><span>⌕</span><small>Поиск</small></button>
+      <button class="nav-item" data-view="wizardView"><span>◎</span><small>Повреждение</small></button>
+      <button class="nav-item" data-view="documentView"><span>▤</span><small>SRM</small></button>
+    </nav>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
